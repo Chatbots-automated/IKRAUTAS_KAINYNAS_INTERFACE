@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .header { margin-bottom: 20px; }
+        .section { margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 8px; }
+        .signature-table td { border: 1px solid #000; }
+        strong { font-weight: bold; }
+        ol { margin: 10px 0; padding-left: 40px; }
+        li { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <p><strong>UAB Įkrautas</strong></p>
+        <p><strong>Elektromobilių įkrovimo stotelių pardavimo ir įrengimo sutartis Nr. {{offerNo}}, Data: {{date}}</strong></p>
+        <p><strong>Klientas:</strong> {{clientName}}, {{clientBirthDate}}, {{clientEmail}}, {{clientPhone}}, {{clientAddress}}</p>
+        <p><strong>Rangovas:</strong> <strong>UAB Įkrautas</strong>, 305604922, LT100013332910, Ozo g. 3, LT-08200 Vilnius, el. paštas: <a href="mailto:info@ikrautas.lt">info@ikrautas.lt</a>, +37064700009, Banko A/S LT687044090100753403, SEB Bankas</p>
+    </div>
+
+    <ol>
+        <li><strong>Elektromobilių įkrovimo stotelės (-ių) montavimas ir rangos darbų sąmata:</strong></li>
+    </ol>
+
+    {{productsTable}}
+
+    <ol start="2">
+        <li><strong>Atsiskaitymo tvarka:</strong> Už perduotas Prekes ir atliktus Darbus Klientas Rangovui įsipareigoja sumokėti Kainą, lygią {{finalTotal}} EUR (su PVM).
+            <ol>
+                <li>50% Kainos, t.y. {{advancePayment}} EUR, per 5 kalendorines dienas nuo Sutarties pasirašymo dienos (avansinis mokėjimas). <strong>Atliekant avansinį mokėjimą būtina nurodyti mokėjimo numerį: {{paymentReference}}</strong></li>
+                <li>50% Kainos, t.y. {{finalPayment}} EUR, sumokama per 7 kalendorines dienas nuo Rangovo Atliktų darbų priėmimo - perdavimo akto pasirašymo datos (pagal Rangovo išrašytą PVM sąskaitą-faktūrą).</li>
+            </ol>
+        </li>
+        <li><strong>Darbų atlikimo terminai ir kita svarbi informacija:</strong>
+            <ol>
+                <li><strong>Garantija (išimtys sutarties bendrojoje dalyje 8.6. punkte)</strong>
+                    <ol>
+                        <li>Stotelei – {{warrantyYears}} metų;</li>
+                        <li>Atliktiems darbams – 2 metai;</li>
+                        <li>Sumontuotoms medžiagom – 2 metai;</li>
+                    </ol>
+                </li>
+                <li>Rangovas įsipareigoja atlikti Elektromobilių įkrovimo stotelės (toliau – Stotelė) įrengimo darbus per 8 savaites nuo Sutarties įsigaliojimo dienos.</li>
+                <li>Prekės pristatomos ir Darbai atliekami Statybos aikštelėje, esančioje: {{clientAddress}}</li>
+            </ol>
+        </li>
+        <li><strong>Sutarties sąlygos:</strong> Sutarties bendrąsias sąlygas rasite paspaudę ant šios nuorodos: <a href="https://ikrautas.lt/wp-content/uploads/2024/09/Ikrovimo-irangos-pardavimo-ir-irengimo-salygos_Bendroji-dalis.pdf">NUORODA</a>
+            <ol>
+                <li>Šalys pasirašydamos sutinka su sutarties sąlygomis ir duomenų tvarkymu;</li>
+            </ol>
+        </li>
+    </ol>
+
+    <h3 style="text-align: center; margin-top: 40px;">Sutarties Šalys</h3>
+    <table class="signature-table">
+        <tr>
+            <td style="width: 50%;"><strong>Klientas</strong></td>
+            <td style="width: 50%;"><strong>Rangovas</strong></td>
+        </tr>
+        <tr>
+            <td>{{clientName}}</td>
+            <td>UAB „Įkrautas"</td>
+        </tr>
+        <tr>
+            <td>&nbsp;</td>
+            <td>Projektų vadovas {{projectManagerName}}</td>
+        </tr>
+        <tr>
+            <td><br><br>___________________<br>(parašas)</td>
+            <td><br><br>___________________<br>(parašas)</td>
+        </tr>
+    </table>
+</body>
+</html>

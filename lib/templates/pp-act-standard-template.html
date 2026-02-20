@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Calibri, sans-serif; }
+        h3 { text-align: center; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        td { padding: 8px; border: 1px solid #000; }
+        ol { margin: 10px 0; padding-left: 40px; }
+        li { margin: 5px 0; text-align: justify; }
+    </style>
+</head>
+<body>
+    <h3>MONTAVIMO/ĮRENGIMO DARBŲ PERDAVIMO-PRIĖMIMO AKTAS</h3>
+    <h3>{{date}}</h3>
+    
+    <table>
+        <tr>
+            <td style="width: 50%;"><strong>Užsakovas (paslaugų rezultatus priima):</strong></td>
+            <td style="width: 50%;"><strong>Vykdytojas (paslaugų rezultatus perduoda):</strong></td>
+        </tr>
+        <tr>
+            <td>{{clientName}}</td>
+            <td>UAB „Įkrautas" pardavimų vadovas<br>{{projectManagerName}}</td>
+        </tr>
+    </table>
+
+    {{productsTable}}
+
+    <p><strong>Paslaugų suteikimo adresas:</strong> <em>{{clientAddress}}</em></p>
+    
+    <ol>
+        <li>Įrengta elektromobilių įkrovimo stotelė su prieiga (-omis).</li>
+        <li>Vykdytojas patvirtina, kad elektromobilių įkrovimo stotelė su prieiga (-omis) įrengta pagal gamintojo instrukciją ir vadovaujantis Elektros įrenginių įrengimo bendrosiomis taisyklėmis, patvirtintomis <a href="https://www.e-tar.lt/portal/lt/legalAct/TAR.6AF8895BD875/asr">Lietuvos Respublikos energetikos ministro 2012 m. vasario 3 d. įsakymu Nr. 1-22 „Dėl Elektros įrenginių įrengimo bendrųjų taisyklių patvirtinimo"</a> reikalavimais.</li>
+        <li>Vykdytojas perduoda Užsakovui darbus, o Užsakovas šiuos darbus priima. Užsakovas neturi Vykdytojui pretenzijų dėl atliktų darbų kokybės.</li>
+        <li>Šis aktas sudarytas dviem egzemplioriais, kurie abu turi vienodą teisinę galią. Vienas pateikiamas Užsakovui, kitas lieka Vykdytojui.</li>
+        <li>Jei Užsakovas be motyvuotos pretenzijos ilgiau kaip penkias darbo dienas nepasirašo šio akto, tuomet prekės ir darbai laikomi perduotais Užsakovui vienašališkai be Užsakovo pastabų.</li>
+    </ol>
+
+    <table>
+        <tr>
+            <td style="width: 50%;"><strong>Vykdytojas:</strong></td>
+            <td style="width: 50%;"><strong>Užsakovas:</strong></td>
+        </tr>
+        <tr>
+            <td><br><br>________________<br>Parašas</td>
+            <td><br><br>________________<br>Parašas</td>
+        </tr>
+        <tr>
+            <td><br>___{{projectManagerName}}___<br>Vardas, pavardė</td>
+            <td><br>___{{clientName}}___<br>Vardas, pavardė</td>
+        </tr>
+    </table>
+</body>
+</html>
