@@ -18,6 +18,10 @@ interface SolarVariables {
   clientEmail?: string;
   roofType?: string;
   roofArea?: string;
+  roofOrientation?: string; // NEW: south, north, east, west
+  roofTilt?: string; // NEW: optimal, flat, steep
+  shadingConditions?: string; // NEW: none, partial, heavy
+  buildingType?: string; // NEW: residential, commercial, industrial
   monthlyConsumption?: string;
   desiredPower?: string;
   budget?: string;
@@ -48,25 +52,71 @@ export default function SolarPlantsPage() {
   const [recommendedProducts, setRecommendedProducts] = useState<RecommendedProduct[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Calculate system specs
+  // Calculate system specs with dynamic factors
   const calculateSystem = () => {
     if (!variables.monthlyConsumption) return null;
 
     const monthlyKwh = parseFloat(variables.monthlyConsumption.replace(/[^0-9.]/g, ''));
     if (isNaN(monthlyKwh)) return null;
 
+    // Base annual consumption
     const annualKwh = monthlyKwh * 12;
-    const systemSizeKw = Math.ceil((annualKwh / 1200) * 10) / 10; // ~1200 kWh per kW per year in Lithuania
-    const panelWattage = 450; // Typical panel
+    
+    // DYNAMIC FACTORS - adjust production efficiency
+    let productionFactor = 1.0; // Base: ideal conditions in Lithuania (~1200 kWh/kW/year)
+    const appliedFactors: string[] = [];
+
+    // Roof Orientation Factor
+    const orientation = variables.roofOrientation?.toLowerCase();
+    if (orientation?.includes('pietus') || orientation?.includes('south')) {
+      productionFactor *= 1.0; // Optimal
+      appliedFactors.push('Pietų orientacija (100%)');
+    } else if (orientation?.includes('rytus') || orientation?.includes('east') || 
+               orientation?.includes('vakarus') || orientation?.includes('west')) {
+      productionFactor *= 0.85; // 15% reduction
+      appliedFactors.push('Rytų/Vakarų orientacija (-15%)');
+    } else if (orientation?.includes('šiaurė') || orientation?.includes('north')) {
+      productionFactor *= 0.60; // 40% reduction!
+      appliedFactors.push('Šiaurės orientacija (-40%)');
+    }
+
+    // Roof Tilt Factor
+    const tilt = variables.roofTilt?.toLowerCase();
+    if (tilt?.includes('plokšč') || tilt?.includes('flat')) {
+      productionFactor *= 0.90; // 10% reduction for flat
+      appliedFactors.push('Plokščias stogas (-10%)');
+    } else if (tilt?.includes('stat') || tilt?.includes('steep')) {
+      productionFactor *= 0.92; // 8% reduction for too steep
+      appliedFactors.push('Per status stogas (-8%)');
+    }
+
+    // Shading Factor
+    const shading = variables.shadingConditions?.toLowerCase();
+    if (shading?.includes('dalin') || shading?.includes('partial')) {
+      productionFactor *= 0.80; // 20% reduction
+      appliedFactors.push('Dalinis ešėšiavimas (-20%)');
+    } else if (shading?.includes('stipr') || shading?.includes('heavy') || shading?.includes('daug')) {
+      productionFactor *= 0.60; // 40% reduction
+      appliedFactors.push('Stiprus ešėšiavimas (-40%)');
+    } else if (shading?.includes('nėra') || shading?.includes('none')) {
+      appliedFactors.push('Be ešėšiavimo (100%)');
+    }
+
+    // Adjusted production per kW
+    const kwhPerKwPerYear = 1200 * productionFactor;
+    
+    const systemSizeKw = Math.ceil((annualKwh / kwhPerKwPerYear) * 10) / 10;
+    const panelWattage = 450;
     const panelsNeeded = Math.ceil((systemSizeKw * 1000) / panelWattage);
     
-    // Cost estimates (EUR per kW)
-    const costPerKw = 1200; // ~1200 EUR/kW installed
+    // Cost estimates
+    const costPerKw = 1200;
     const totalCost = Math.round(systemSizeKw * costPerKw);
     
-    // Savings (assume 0.15 EUR/kWh)
+    // Savings with adjusted production
     const electricityPrice = 0.15;
-    const annualSavings = Math.round(annualKwh * electricityPrice);
+    const annualProduction = Math.round(systemSizeKw * kwhPerKwPerYear);
+    const annualSavings = Math.round(Math.min(annualProduction, annualKwh) * electricityPrice);
     const paybackYears = Math.round((totalCost / annualSavings) * 10) / 10;
     const profit25Years = Math.round((annualSavings * 25) - totalCost);
 
@@ -74,10 +124,13 @@ export default function SolarPlantsPage() {
       systemSizeKw,
       panelsNeeded,
       annualKwh,
+      annualProduction,
       totalCost,
       annualSavings,
       paybackYears,
       profit25Years,
+      productionFactor: Math.round(productionFactor * 100),
+      appliedFactors,
     };
   };
 
@@ -185,6 +238,7 @@ export default function SolarPlantsPage() {
 
     console.log('🚀 [CREATE OFFER] Starting...');
     console.log('📋 [CREATE OFFER] Variables:', variables);
+    console.log('🛒 [CREATE OFFER] Recommended products:', recommendedProducts);
     
     setIsCreatingOffer(true);
 
@@ -192,7 +246,71 @@ export default function SolarPlantsPage() {
       // Generate offer number
       const offerNo = `SAULES-${Date.now().toString().slice(-8)}`;
 
-      // Create offer with collected variables
+      // Fetch full product details for recommended products
+      let offerItems: any[] = [];
+      let subtotal = 0;
+
+      if (recommendedProducts.length > 0) {
+        console.log('🔍 [CREATE OFFER] Fetching product details...');
+        
+        // Fetch all products to match by name
+        const productsResponse = await fetch('/api/products');
+        const productsResult = await productsResponse.json();
+        
+        if (productsResult.ok && productsResult.data) {
+          const allProducts = productsResult.data;
+          console.log('📦 [CREATE OFFER] Got all products:', allProducts.length);
+          
+          // Match recommended products to database products
+          offerItems = recommendedProducts.map((recProd, index) => {
+            const dbProduct = allProducts.find((p: any) => 
+              p.name.toLowerCase() === recProd.name.toLowerCase()
+            );
+            
+            if (dbProduct) {
+              console.log(`✅ [CREATE OFFER] Matched: ${recProd.name} → ${dbProduct.id}`);
+              const lineTotal = recProd.price * recProd.quantity;
+              subtotal += lineTotal;
+              
+              return {
+                product_id: dbProduct.id,
+                name: dbProduct.name,
+                unit_price: recProd.price,
+                quantity: recProd.quantity,
+                category_id: dbProduct.category_id,
+                vat_rate: 0.21,
+                hide_qty: false,
+                is_custom: false,
+                sort_order: index,
+              };
+            } else {
+              console.warn(`⚠️ [CREATE OFFER] No match for: ${recProd.name}`);
+              // Create as custom item if not found in DB
+              const lineTotal = recProd.price * recProd.quantity;
+              subtotal += lineTotal;
+              
+              return {
+                product_id: null,
+                name: recProd.name,
+                unit_price: recProd.price,
+                quantity: recProd.quantity,
+                category_id: null,
+                vat_rate: 0.21,
+                hide_qty: false,
+                is_custom: true,
+                sort_order: index,
+              };
+            }
+          });
+          
+          console.log('📋 [CREATE OFFER] Prepared offer items:', offerItems);
+        }
+      }
+
+      const vat = subtotal * 0.21;
+      const total = subtotal + vat;
+
+      // Create offer with collected variables and AI-recommended products
       const offerData = {
         offerNo: offerNo,
         formData: {
@@ -204,16 +322,16 @@ export default function SolarPlantsPage() {
           project_manager_name: 'AI Asistentas',
           payment_reference: null,
           warranty_years: variables.warranty_years ? parseInt(variables.warranty_years) : 10,
-          notes: variables.notes || `Stogo tipas: ${variables.roofType || '-'}\nStogo plotas: ${variables.roofArea || '-'}\nMėnesinis suvartojimas: ${variables.monthlyConsumption || '-'}\nNorima galia: ${variables.desiredPower || '-'}\nBiudžetas: ${variables.budget || '-'}`,
+          notes: variables.notes || `Stogo tipas: ${variables.roofType || '-'}\nStogo orientacija: ${variables.roofOrientation || '-'}\nŠešėliavimas: ${variables.shadingConditions || '-'}\nStogo plotas: ${variables.roofArea || '-'}\nMėnesinis suvartojimas: ${variables.monthlyConsumption || '-'}\nNorima galia: ${variables.desiredPower || '-'}\nBiudžetas: ${variables.budget || '-'}`,
         },
-        items: [], // Empty for now, user will add products manually
+        items: offerItems, // Pre-populated with AI recommendations!
         discountPercent: null,
         ignitisDiscountEur: null,
         applyDiscountAfterVat: true,
         totals: {
-          subtotal: 0,
-          vat: 0,
-          total: 0,
+          subtotal,
+          vat,
+          total,
         },
       };
 
@@ -230,6 +348,7 @@ export default function SolarPlantsPage() {
 
       if (result.ok && result.data) {
         console.log('✅ [CREATE OFFER] Offer created:', result.data.id);
+        console.log(`💰 [CREATE OFFER] Total: ${total.toFixed(2)} EUR (${offerItems.length} items)`);
         console.log('🔀 [CREATE OFFER] Redirecting to offer page...');
         
         // Redirect to the new offer page
@@ -381,6 +500,8 @@ export default function SolarPlantsPage() {
               <div className="space-y-2">
                 <VariableField label="Stogo tipas" value={variables.roofType} />
                 <VariableField label="Stogo plotas" value={variables.roofArea} />
+                <VariableField label="Orientacija" value={variables.roofOrientation} highlight />
+                <VariableField label="Šešėliavimas" value={variables.shadingConditions} highlight />
                 <VariableField label="Mėnesinis suvartojimas" value={variables.monthlyConsumption} />
                 <VariableField label="Norima galia" value={variables.desiredPower} />
               </div>
@@ -402,11 +523,38 @@ export default function SolarPlantsPage() {
                 <h3 className="text-sm font-semibold text-zinc-900 mb-3 flex items-center gap-2">
                   <span>🔆</span>
                   Sistemos kalkuliacija
+                  <span className={`ml-auto text-xs px-2 py-0.5 rounded ${
+                    systemCalc.productionFactor >= 95 ? 'bg-green-100 text-green-700' :
+                    systemCalc.productionFactor >= 80 ? 'bg-amber-100 text-amber-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    {systemCalc.productionFactor}% sąlygos
+                  </span>
                 </h3>
+
+                {/* Applied Factors */}
+                {systemCalc.appliedFactors.length > 0 && (
+                  <div className="mb-3 p-2 bg-white rounded border border-amber-200">
+                    <p className="text-xs font-medium text-zinc-700 mb-1">Įvertinti faktoriai:</p>
+                    <ul className="text-xs text-zinc-600 space-y-0.5">
+                      {systemCalc.appliedFactors.map((factor, idx) => (
+                        <li key={idx} className="flex items-start gap-1">
+                          <span className="text-amber-600">•</span>
+                          <span>{factor}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-zinc-600">Metinis suvartojimas:</span>
                     <span className="font-semibold text-zinc-900">{systemCalc.annualKwh} kWh</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-600">Numatoma gamyba:</span>
+                    <span className="font-semibold text-amber-600">{systemCalc.annualProduction} kWh</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-zinc-600">Sistemos dydis:</span>
@@ -422,17 +570,35 @@ export default function SolarPlantsPage() {
                     <span className="font-bold text-zinc-900">{systemCalc.totalCost.toLocaleString()} EUR</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-zinc-600">Metinės taupymas:</span>
+                    <span className="text-zinc-600">Metinis taupymas:</span>
                     <span className="font-semibold text-green-600">~{systemCalc.annualSavings} EUR</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-zinc-600">Atsiperkamumas:</span>
-                    <span className="font-semibold text-cyan-600">{systemCalc.paybackYears} metai</span>
+                    <span className={`font-semibold ${
+                      systemCalc.paybackYears <= 8 ? 'text-green-600' :
+                      systemCalc.paybackYears <= 12 ? 'text-cyan-600' :
+                      'text-orange-600'
+                    }`}>
+                      {systemCalc.paybackYears} metai
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-zinc-600">25 metų pelnas:</span>
-                    <span className="font-bold text-green-700">+{systemCalc.profit25Years.toLocaleString()} EUR</span>
+                    <span className={`font-bold ${
+                      systemCalc.profit25Years > 10000 ? 'text-green-700' :
+                      systemCalc.profit25Years > 5000 ? 'text-green-600' :
+                      'text-orange-600'
+                    }`}>
+                      {systemCalc.profit25Years > 0 ? '+' : ''}{systemCalc.profit25Years.toLocaleString()} EUR
+                    </span>
                   </div>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-amber-200">
+                  <p className="text-xs text-zinc-600">
+                    *Skaičiavimai pagal realias sąlygas
+                  </p>
                 </div>
               </div>
             )}
@@ -500,21 +666,27 @@ function VariableField({
   label,
   value,
   multiline = false,
+  highlight = false,
 }: {
   label: string;
   value?: string;
   multiline?: boolean;
+  highlight?: boolean;
 }) {
   return (
     <div>
-      <label className="text-xs font-medium text-zinc-600 block mb-1">
-        {label}
+      <label className={`text-xs font-medium block mb-1 ${
+        highlight ? 'text-amber-700' : 'text-zinc-600'
+      }`}>
+        {label} {highlight && value && <span className="text-amber-500">⚡</span>}
       </label>
       {multiline ? (
         <div
           className={`text-sm rounded border px-3 py-2 min-h-[60px] ${
             value
-              ? 'bg-cyan-50 border-cyan-200 text-zinc-900'
+              ? highlight 
+                ? 'bg-amber-50 border-amber-300 text-zinc-900 font-medium'
+                : 'bg-cyan-50 border-cyan-200 text-zinc-900'
               : 'bg-zinc-50 border-zinc-200 text-zinc-400'
           }`}
         >
@@ -524,7 +696,9 @@ function VariableField({
         <div
           className={`text-sm rounded border px-3 py-2 ${
             value
-              ? 'bg-cyan-50 border-cyan-200 text-zinc-900 font-medium'
+              ? highlight
+                ? 'bg-amber-50 border-amber-300 text-zinc-900 font-medium'
+                : 'bg-cyan-50 border-cyan-200 text-zinc-900 font-medium'
               : 'bg-zinc-50 border-zinc-200 text-zinc-400'
           }`}
         >
