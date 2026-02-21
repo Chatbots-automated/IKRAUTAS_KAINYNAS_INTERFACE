@@ -29,6 +29,20 @@ export interface Product {
   collapse_into_materials: boolean;
   created_at: string;
   updated_at: string;
+  // Solar-specific fields
+  power_output?: string | null; // e.g., "10 kW", "450 W"
+  efficiency_percent?: number | null; // e.g., 21.5
+  dimensions?: string | null; // e.g., "1722x1134x30 mm"
+  weight_kg?: number | null; // e.g., 22.5
+  warranty_years?: number | null; // e.g., 25
+  technology_type?: string | null; // e.g., "Monocrystalline", "String inverter"
+  brand?: string | null; // e.g., "JA Solar", "Huawei"
+  certifications?: string | null; // e.g., "CE, IEC 61215"
+  max_input_voltage?: string | null; // For inverters, e.g., "1100 V"
+  mppt_channels?: number | null; // For inverters, e.g., 2
+  installation_type?: string | null; // e.g., "Roof-mounted"
+  datasheet_url?: string | null; // Link to datasheet
+  description?: string | null; // Detailed description
 }
 
 export interface Offer {

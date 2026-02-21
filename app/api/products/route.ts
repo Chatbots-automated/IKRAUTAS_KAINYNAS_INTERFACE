@@ -52,6 +52,19 @@ export async function POST(request: Request) {
         is_service: body.is_service,
         is_internal_only: body.is_internal_only,
         collapse_into_materials: body.collapse_into_materials,
+        // Solar-specific fields
+        power_output: body.power_output,
+        efficiency_percent: body.efficiency_percent,
+        dimensions: body.dimensions,
+        weight_kg: body.weight_kg,
+        warranty_years: body.warranty_years,
+        technology_type: body.technology_type,
+        brand: body.brand,
+        certifications: body.certifications,
+        max_input_voltage: body.max_input_voltage,
+        mppt_channels: body.mppt_channels,
+        installation_type: body.installation_type,
+        description: body.description,
       })
       .select()
       .single();

@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Modal } from './ui/Modal';
 import { useToast } from './ui/Toast';
 import { useOfferStore } from '@/lib/store/offer-store';
 import { Category } from '@/lib/types';
@@ -17,6 +19,9 @@ export function ExportButtons({ categories }: ExportButtonsProps) {
   const { showToast } = useToast();
   const [isExporting, setIsExporting] = useState<ExportType | null>(null);
   const [previewType, setPreviewType] = useState<ExportType | null>(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailAddress, setEmailAddress] = useState('');
   
   const {
     offerNo,
@@ -26,6 +31,7 @@ export function ExportButtons({ categories }: ExportButtonsProps) {
     ignitisDiscountEur,
     applyDiscountAfterVat,
     totals,
+    offerId,
   } = useOfferStore();
 
   const handleExport = async (type: ExportType) => {
@@ -150,6 +156,19 @@ export function ExportButtons({ categories }: ExportButtonsProps) {
           {isExporting ? 'Generuojama...' : '📥 Visi dokumentai'}
         </Button>
 
+        <Button
+          variant="secondary"
+          size="sm"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0"
+          onClick={() => {
+            setEmailAddress(formData.client_email || '');
+            setShowEmailModal(true);
+          }}
+          disabled={isExporting !== null || !offerId}
+        >
+          📧 Siųsti el. paštu
+        </Button>
+
         <div className="space-y-2">
           <div className="flex gap-2">
             <Button
@@ -223,6 +242,90 @@ export function ExportButtons({ categories }: ExportButtonsProps) {
         categories={categories}
         onExport={() => previewType && handleExport(previewType)}
       />
+
+      {/* Email Modal */}
+      <Modal
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+        title="Siųsti pasiūlymą el. paštu"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-zinc-600">
+            Pasiūlymas bus išsiųstas su visais dokumentais (SAMATA, Sutartis, PP Aktas).
+          </p>
+          
+          <Input
+            type="email"
+            label="El. pašto adresas"
+            value={emailAddress}
+            onChange={(e) => setEmailAddress(e.target.value)}
+            placeholder="klientas@example.com"
+          />
+
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p className="text-xs text-amber-800">
+              <strong>Demo režimas:</strong> El. laiškas bus simuliuotas. Pasiūlymo būsena bus pakeista į "Išsiųstas".
+            </p>
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <Button
+              variant="ghost"
+              onClick={() => setShowEmailModal(false)}
+              className="flex-1"
+              disabled={isSendingEmail}
+            >
+              Atšaukti
+            </Button>
+            <Button
+              variant="primary"
+              onClick={async () => {
+                if (!emailAddress || !offerId) {
+                  showToast('Įveskite el. pašto adresą', 'error');
+                  return;
+                }
+
+                setIsSendingEmail(true);
+                try {
+                  const response = await fetch('/api/offers/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      offerId: offerId,
+                      recipientEmail: emailAddress,
+                      includeAttachments: true,
+                    }),
+                  });
+
+                  const result = await response.json();
+
+                  if (result.ok) {
+                    showToast('El. laiškas išsiųstas klientui!', 'success');
+                    setShowEmailModal(false);
+                    
+                    // Reload page to show updated status
+                    if (typeof window !== 'undefined') {
+                      window.location.reload();
+                    }
+                  } else {
+                    showToast(result.message || 'Klaida', 'error');
+                  }
+                } catch (error) {
+                  console.error('Error sending email:', error);
+                  showToast('Nepavyko išsiųsti', 'error');
+                } finally {
+                  setIsSendingEmail(false);
+                }
+              }}
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
+              disabled={isSendingEmail || !emailAddress}
+            >
+              {isSendingEmail ? '⏳ Siunčiama...' : '📧 Siųsti'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }
